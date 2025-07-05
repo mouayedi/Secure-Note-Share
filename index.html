@@ -3,147 +3,214 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Secure Note Share</title>
+  <title>Password Strength Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      background: #0f2027;
-      background: linear-gradient(to bottom, #2c5364, #203a43, #0f2027);
+      font-family: 'Poppins', sans-serif;
+      background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364);
+      color: #f8f8f8;
       overflow: hidden;
-      color: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
     }
     canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: -1;
     }
     .container {
-      position: relative;
-      z-index: 1;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 30px;
-      border-radius: 15px;
-      max-width: 600px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 40px;
+      border-radius: 20px;
+      max-width: 500px;
       width: 90%;
       text-align: center;
       box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+      margin: 80px auto;
+      backdrop-filter: blur(10px);
     }
-    textarea, input {
+    h2 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #00ffe7;
+    }
+    .input-group { position: relative; }
+    input[type="password"], input[type="text"] {
       width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: none;
-      margin-top: 10px;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #00ffe7;
+      background: #1a1a2e;
+      color: #fff;
       font-size: 16px;
+      margin-bottom: 15px;
     }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #00bcd4;
-      color: white;
-      border: none;
-      border-radius: 8px;
+    .toggle-visibility {
+      position: absolute;
+      right: 12px;
+      top: 16px;
+      font-size: 13px;
       cursor: pointer;
+      color: #ccc;
     }
-    .footer {
+    #strength-bar {
+      width: 100%;
+      height: 14px;
+      background: #444;
+      border-radius: 7px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    #bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff4d4d, #ffa94d, #f6f94d, #4dfc58, #4dffc2);
+      transition: width 0.4s ease;
+      border-radius: 7px;
+    }
+    #feedback {
+      font-size: 16px;
+      margin-bottom: 14px;
+      color: #d4d4d4;
+    }
+    .checklist {
+      text-align: left;
       margin-top: 20px;
-      font-size: 14px;
+      font-size: 15px;
     }
-    .footer a {
-      color: #00e6e6;
-      text-decoration: none;
+    .checklist div.met::before {
+      content: '✔️ ';
+      color: #00ff99;
+    }
+    .checklist div:not(.met)::before {
+      content: '❌ ';
+      color: #ff6b6b;
+    }
+    button, select {
+      background: #00ffe7;
+      color: #000;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
       font-weight: bold;
+      cursor: pointer;
+      margin: 10px 5px;
+      transition: 0.3s ease;
+    }
+    button:hover, select:hover {
+      background: #00c2a8;
+    }
+    #breach-warning {
+      color: #ff4c4c;
+      margin-top: 12px;
+    }
+    #breach-count {
+      font-size: 13px;
+      color: #ccc;
+    }
+    #hash-output {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #00ffff;
+    }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 13px;
+      color: #aaa;
+    }
+    footer a {
+      color: #00ffe7;
+      text-decoration: none;
+    }
+    footer a:hover {
+      color: #00c2a8;
     }
   </style>
 </head>
 <body>
-  <canvas id="stars"></canvas>
+  <canvas id="bg"></canvas>
+
   <div class="container">
-    <h2>🔐 Secure Note Share</h2>
-    <textarea id="inputText" rows="4" placeholder="Write your note here..."></textarea>
-    <button onclick="encryptNote()">Encrypt Note</button>
-    <textarea id="encryptedText" rows="4" placeholder="Encrypted output..." readonly></textarea>
-    <input id="key" placeholder="Encryption Key" readonly />
-    <input id="iv" placeholder="IV" readonly />
-    <button onclick="decryptNote()">Decrypt Note</button>
-    <textarea id="decryptedText" rows="4" placeholder="Decrypted output..." readonly></textarea>
-    <div class="footer">
-      Created by <a href="https://www.linkedin.com/in/mouayed-ibrahim/" target="_blank">Mouayed Ibrahim</a>
+    <h2>Password Strength Checker</h2>
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Enter your password" oninput="checkStrength()">
+      <span class="toggle-visibility" onclick="toggleVisibility()">Show</span>
     </div>
+    <div id="strength-bar"><div id="bar-fill"></div></div>
+    <p id="feedback">Start typing...</p>
+
+    <div class="checklist">
+      <div id="length">At least 8 characters</div>
+      <div id="uppercase">At least 1 uppercase letter</div>
+      <div id="lowercase">At least 1 lowercase letter</div>
+      <div id="number">At least 1 number</div>
+      <div id="special">At least 1 special character</div>
+    </div>
+
+    <p id="breach-warning"></p>
+    <div id="breach-count"></div>
+
+    <div>
+      <button onclick="generatePassword()">Generate</button>
+      <button onclick="saltPassword()">Salt</button>
+      <button onclick="copyPassword()">Copy</button>
+    </div>
+
+    <div>
+      <select id="hashAlgo">
+        <option value="sha256">SHA-256</option>
+        <option value="md5">MD5</option>
+      </select>
+      <button onclick="hashPassword()">Hash</button>
+    </div>
+    <div id="hash-output"></div>
   </div>
+
+  <footer>
+    Built by <a href="https://www.linkedin.com/in/mouayed-ibrahim/" target="_blank">Mouayed Ibrahim</a> | Inspired by Cyber Enthusiasm 🚀
+  </footer>
+
   <script>
-    async function encryptNote() {
-      const note = document.getElementById("inputText").value;
-      const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-
-      const enc = new TextEncoder().encode(note);
-      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc);
-
-      document.getElementById("encryptedText").value = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-
-      const exportedKey = await crypto.subtle.exportKey("raw", key);
-      document.getElementById("key").value = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
-      document.getElementById("iv").value = btoa(String.fromCharCode(...iv));
-    }
-
-    async function decryptNote() {
-      const encryptedText = atob(document.getElementById("encryptedText").value);
-      const key = atob(document.getElementById("key").value);
-      const iv = atob(document.getElementById("iv").value);
-
-      const encryptedBytes = new Uint8Array([...encryptedText].map(c => c.charCodeAt(0)));
-      const keyBytes = new Uint8Array([...key].map(c => c.charCodeAt(0)));
-      const ivBytes = new Uint8Array([...iv].map(c => c.charCodeAt(0)));
-
-      const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
-      try {
-        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBytes }, cryptoKey, encryptedBytes);
-        document.getElementById("decryptedText").value = new TextDecoder().decode(decrypted);
-      } catch (err) {
-        document.getElementById("decryptedText").value = "⚠️ Failed to decrypt. Check key and IV.";
-      }
-    }
-
-    // Starry background
-    const canvas = document.getElementById("stars");
+    const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d");
     let stars = [];
 
-    function resize() {
+    function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     }
-    window.addEventListener("resize", resize);
-    resize();
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 150; i++) {
       stars.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.5 + 0.5
+        radius: Math.random() * 1.5 + 0.5,
+        dx: Math.random() * 0.4 - 0.2,
+        dy: Math.random() * 0.4 - 0.2
       });
     }
 
-    function animateStars() {
+    function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#fff";
-      for (let star of stars) {
+      for (let s of stars) {
         ctx.beginPath();
-        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#00ffe7';
         ctx.fill();
+        s.x += s.dx;
+        s.y += s.dy;
+
+        if (s.x < 0 || s.x > canvas.width) s.dx *= -1;
+        if (s.y < 0 || s.y > canvas.height) s.dy *= -1;
       }
-      requestAnimationFrame(animateStars);
+      requestAnimationFrame(animate);
     }
-    animateStars();
+    animate();
   </script>
 </body>
 </html>
+
