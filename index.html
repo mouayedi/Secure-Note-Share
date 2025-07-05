@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Note Share</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: #0f2027;
+      background: linear-gradient(to bottom, #2c5364, #203a43, #0f2027);
+      overflow: hidden;
+      color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+    .container {
+      position: relative;
+      z-index: 1;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 30px;
+      border-radius: 15px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+    }
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #00bcd4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #00e6e6;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <div class="container">
+    <h2>🔐 Secure Note Share</h2>
+    <textarea id="inputText" rows="4" placeholder="Write your note here..."></textarea>
+    <button onclick="encryptNote()">Encrypt Note</button>
+    <textarea id="encryptedText" rows="4" placeholder="Encrypted output..." readonly></textarea>
+    <input id="key" placeholder="Encryption Key" readonly />
+    <input id="iv" placeholder="IV" readonly />
+    <button onclick="decryptNote()">Decrypt Note</button>
+    <textarea id="decryptedText" rows="4" placeholder="Decrypted output..." readonly></textarea>
+    <div class="footer">
+      Created by <a href="https://www.linkedin.com/in/mouayed-ibrahim/" target="_blank">Mouayed Ibrahim</a>
+    </div>
+  </div>
+  <script>
+    async function encryptNote() {
+      const note = document.getElementById("inputText").value;
+      const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+
+      const enc = new TextEncoder().encode(note);
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc);
+
+      document.getElementById("encryptedText").value = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+
+      const exportedKey = await crypto.subtle.exportKey("raw", key);
+      document.getElementById("key").value = btoa(String.fromCharCode(...new Uint8Array(exportedKey)));
+      document.getElementById("iv").value = btoa(String.fromCharCode(...iv));
+    }
+
+    async function decryptNote() {
+      const encryptedText = atob(document.getElementById("encryptedText").value);
+      const key = atob(document.getElementById("key").value);
+      const iv = atob(document.getElementById("iv").value);
+
+      const encryptedBytes = new Uint8Array([...encryptedText].map(c => c.charCodeAt(0)));
+      const keyBytes = new Uint8Array([...key].map(c => c.charCodeAt(0)));
+      const ivBytes = new Uint8Array([...iv].map(c => c.charCodeAt(0)));
+
+      const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+      try {
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBytes }, cryptoKey, encryptedBytes);
+        document.getElementById("decryptedText").value = new TextDecoder().decode(decrypted);
+      } catch (err) {
+        document.getElementById("decryptedText").value = "⚠️ Failed to decrypt. Check key and IV.";
+      }
+    }
+
+    // Starry background
+    const canvas = document.getElementById("stars");
+    const ctx = canvas.getContext("2d");
+    let stars = [];
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    for (let i = 0; i < 100; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.5
+      });
+    }
+
+    function animateStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#fff";
+      for (let star of stars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      requestAnimationFrame(animateStars);
+    }
+    animateStars();
+  </script>
+</body>
+</html>
