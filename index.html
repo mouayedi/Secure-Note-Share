@@ -10,17 +10,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Poppins', sans-serif;
-      background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364);
+      background: url('https://wallpaperaccess.com/full/1910825.jpg') no-repeat center center fixed;
+      background-size: cover;
       color: #f8f8f8;
-      overflow: hidden;
-    }
-    canvas {
-      position: fixed;
-      top: 0; left: 0;
-      z-index: -1;
     }
     .container {
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.8);
       padding: 40px;
       border-radius: 20px;
       max-width: 500px;
@@ -28,7 +23,6 @@
       text-align: center;
       box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
       margin: 80px auto;
-      backdrop-filter: blur(10px);
     }
     h2 {
       font-size: 28px;
@@ -130,8 +124,6 @@
   </style>
 </head>
 <body>
-  <canvas id="bg"></canvas>
-
   <div class="container">
     <h2>Password Strength Checker</h2>
     <div class="input-group">
@@ -173,44 +165,90 @@
   </footer>
 
   <script>
-    const canvas = document.getElementById("bg");
-    const ctx = canvas.getContext("2d");
-    let stars = [];
+    function checkStrength() {
+      const password = document.getElementById("password").value;
+      const barFill = document.getElementById("bar-fill");
+      const feedback = document.getElementById("feedback");
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      let strength = 0;
+      const hasLength = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+      if (hasLength) strength++;
+      if (hasUpper) strength++;
+      if (hasLower) strength++;
+      if (hasNumber) strength++;
+      if (hasSpecial) strength++;
+
+      document.getElementById("length").className = hasLength ? "met" : "";
+      document.getElementById("uppercase").className = hasUpper ? "met" : "";
+      document.getElementById("lowercase").className = hasLower ? "met" : "";
+      document.getElementById("number").className = hasNumber ? "met" : "";
+      document.getElementById("special").className = hasSpecial ? "met" : "";
+
+      const widthPercent = (strength / 5) * 100;
+      let color = "gray", text = "Start typing...";
+      switch (strength) {
+        case 1: color = "red"; text = "Very Weak"; break;
+        case 2: color = "orange"; text = "Weak"; break;
+        case 3: color = "yellow"; text = "Moderate"; break;
+        case 4: color = "lightgreen"; text = "Strong"; break;
+        case 5: color = "limegreen"; text = "Very Strong"; break;
+      }
+      barFill.style.width = `${widthPercent}%`;
+      barFill.style.background = color;
+      feedback.innerHTML = text;
     }
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
 
-    for (let i = 0; i < 150; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 1.5 + 0.5,
-        dx: Math.random() * 0.4 - 0.2,
-        dy: Math.random() * 0.4 - 0.2
+    function toggleVisibility() {
+      const input = document.getElementById("password");
+      const toggle = document.querySelector(".toggle-visibility");
+      input.type = input.type === "password" ? "text" : "password";
+      toggle.textContent = input.type === "password" ? "Show" : "Hide";
+    }
+
+    function generatePassword() {
+      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+      let password = "";
+      for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      document.getElementById("password").value = password;
+      checkStrength();
+    }
+
+    function saltPassword() {
+      let pwd = document.getElementById("password").value;
+      if (!pwd) return;
+      const salt = Math.random().toString(36).substring(2, 6);
+      document.getElementById("password").value = pwd + salt;
+      checkStrength();
+    }
+
+    function copyPassword() {
+      const password = document.getElementById("password").value;
+      navigator.clipboard.writeText(password).then(() => {
+        alert("Password copied to clipboard!");
       });
     }
 
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let s of stars) {
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ffe7';
-        ctx.fill();
-        s.x += s.dx;
-        s.y += s.dy;
-
-        if (s.x < 0 || s.x > canvas.width) s.dx *= -1;
-        if (s.y < 0 || s.y > canvas.height) s.dy *= -1;
+    function hashPassword() {
+      const password = document.getElementById("password").value;
+      const algo = document.getElementById("hashAlgo").value;
+      const output = document.getElementById("hash-output");
+      if (!password) return;
+      if (algo === "md5") {
+        output.textContent = "MD5: " + CryptoJS.MD5(password).toString();
+      } else if (algo === "sha256") {
+        output.textContent = "SHA-256: " + CryptoJS.SHA256(password).toString();
       }
-      requestAnimationFrame(animate);
     }
-    animate();
   </script>
+</body>
+</html>
 </body>
 </html>
 
